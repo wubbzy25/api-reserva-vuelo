@@ -21,6 +21,7 @@ public class Roles {
     @ManyToMany(mappedBy = "roles")
     private List<Usuarios> usuarios;
 
+
     @Override
     public final boolean equals(Object o) {
         if (this == o) return true;

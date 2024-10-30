@@ -3,11 +3,9 @@ package com.api.reservavuelos.Controllers;
 import com.api.reservavuelos.DTO.Cache.VueloCacheDTO;
 import com.api.reservavuelos.DTO.Request.VueloUpdateStateRequestDTO;
 import com.api.reservavuelos.DTO.Request.VuelosRequestDTO;
-import com.api.reservavuelos.DTO.Request.VuelosUpdateRequestDTO;
+import com.api.reservavuelos.DTO.Response.AsientosResponseDTO;
 import com.api.reservavuelos.DTO.Response.ResponseDTO;
 import com.api.reservavuelos.DTO.Response.VuelosResponseDTO;
-import com.api.reservavuelos.Mappers.VueloMapper;
-import com.api.reservavuelos.Models.Vuelos;
 import com.api.reservavuelos.Services.VuelosService;
 import com.api.reservavuelos.Utils.DateFormatter;
 import jakarta.servlet.http.HttpServletRequest;
@@ -41,6 +39,10 @@ public class VuelosController {
     public ResponseEntity<VuelosResponseDTO> getVueloPorId(@PathVariable Long id_vuelo){
         return new ResponseEntity<>(vuelosService.obtenerVuelo(id_vuelo), HttpStatus.OK);
     }
+    @GetMapping("vuelo/asientos/{id_vuelo}")
+    public ResponseEntity<?> getVuelosConAsientosDisponibles(@PathVariable Long id_vuelo){
+        return new ResponseEntity<>(vuelosService.obtenerAsientos(id_vuelo), HttpStatus.OK);
+    }
 
     //admin controllers
     @PostMapping("/vuelo/crear")
@@ -49,7 +51,7 @@ public class VuelosController {
     }
 
     @PutMapping("/vuelo/editar/{id_editar}")
-    public ResponseEntity<ResponseDTO> editarVuelo(@PathVariable Long id_editar, @Valid @RequestBody VuelosUpdateRequestDTO vueloUpdateDto, HttpServletRequest request){
+    public ResponseEntity<ResponseDTO> editarVuelo(@PathVariable Long id_editar, @Valid @RequestBody VuelosRequestDTO vueloUpdateDto, HttpServletRequest request){
         vuelosService.actualizarInformacionVuelo(id_editar,vueloUpdateDto,request);
         return new ResponseEntity<>(new ResponseDTO(dateFormatter.formatearFecha(), "P-200", "La informacion del vuelo se actualizo correctamente", request.getRequestURI()),HttpStatus.OK);
     }

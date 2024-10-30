@@ -39,6 +39,7 @@ public class Usuarios  {
      @OneToOne(fetch = FetchType.EAGER, cascade = CascadeType.ALL)
      @JoinColumn(name = "id_credencial")
     private Credenciales credenciales;
+    @ToString.Exclude
      @ManyToMany(fetch = FetchType.EAGER, cascade = CascadeType.ALL)
      @JoinTable(
              name = "usuarios_roles",
@@ -46,13 +47,14 @@ public class Usuarios  {
              inverseJoinColumns = @JoinColumn(name = "id_rol")
      )
      private List<Roles> roles;
+    @ToString.Exclude
      @OneToOne(fetch = FetchType.EAGER, cascade = CascadeType.ALL)
      @JoinColumn(name = "id_profile_image")
      private Profile_image profile_image;
-    @OneToMany(mappedBy = "usuarios")
-    private List<Metodos_pagos> metodoPagos;
+    @ToString.Exclude
     @OneToOne(mappedBy = "usuarios")
     private TwoFactorAuth twoFactorAuth;
+    @ToString.Exclude
     @OneToOne(mappedBy = "usuarios")
     private Reservas reservas;
     @Override
@@ -70,4 +72,6 @@ public class Usuarios  {
     public final int hashCode() {
         return this instanceof HibernateProxy ? ((HibernateProxy) this).getHibernateLazyInitializer().getPersistentClass().hashCode() : getClass().hashCode();
     }
+
+
 }

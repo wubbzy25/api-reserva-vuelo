@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.proxy.HibernateProxy;
 
+import java.time.LocalDate;
 import java.util.Date;
 import java.util.Objects;
 
@@ -18,7 +19,7 @@ public class Reservas {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long idReserva;
-    private Date fecha_reserva;
+    private String fecha_reserva;
     private int numero_asiento;
     private String clase;
     private String estado;

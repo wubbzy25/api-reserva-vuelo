@@ -22,6 +22,7 @@ public class Profile_image  {
     @Column()
     private String image_url;
 
+    @ToString.Exclude
     @OneToOne(mappedBy = "profile_image")
     private Usuarios usuarios;
 

@@ -1,4 +1,5 @@
 package com.api.reservavuelos.Services;
+//importamos las librerias necesarias
 import com.api.reservavuelos.DTO.Cache.AuthenticationCacheDTO;
 import com.api.reservavuelos.DTO.Cache.ProfileCacheDTO;
 import com.api.reservavuelos.DTO.Request.*;
@@ -15,7 +16,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletRequest;
 import org.apache.hc.client5.http.auth.InvalidCredentialsException;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -30,9 +30,12 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
+
+//definimos la clase AuthService y la anotamos con @Service para que Spring la reconozca como un servicio
 @Service
 public class AuthService {
 
+    //declaramos los repositorios, servicios, variables, etc.
     private final UsuarioRepository usuarioRepository;
     private final RolRepository rolRepository;
     private final CredencialesRepository credencialesRepository;
@@ -47,8 +50,8 @@ public class AuthService {
     private final TwoFactorAuthRepository twoFactorAuthRepository;
     private final QRCodeGenerator qrCodeGenerator;
     private final RedisTemplate<String, Object> redisTemplate;
-    private final ObjectMapper objectMapper;
 
+    //aplicamos inyeccion de dependencias por el constructor
     @Autowired
     public AuthService(UsuarioRepository usuarioRepository,
                        RolRepository rolRepository,
@@ -63,8 +66,7 @@ public class AuthService {
                        GoogleAuthenticatorService googleAuthenticatorService,
                        TwoFactorAuthRepository twoFactorAuthRepository,
                        QRCodeGenerator qrCodeGenerator,
-                       RedisTemplate<String, Object> redisTemplate,
-                       ObjectMapper objectMapper) {
+                       RedisTemplate<String, Object> redisTemplate) {
         this.usuarioRepository = usuarioRepository;
         this.rolRepository = rolRepository;
         this.credencialesRepository = credencialesRepository;
@@ -79,16 +81,19 @@ public class AuthService {
         this.twoFactorAuthRepository = twoFactorAuthRepository;
         this.qrCodeGenerator = qrCodeGenerator;
         this.redisTemplate = redisTemplate;
-        this.objectMapper = objectMapper;
     }
 
 
-    public AuthResponseDTO registrarUsuario(RegisterRequestDTO registerRequestDTO, HttpServletRequest request){
-       if (usuarioRepository.existsByEmail(registerRequestDTO.getEmail())){
+     //metodo para registrar usuarios
+    public Usuarios registrarUsuario(RegisterRequestDTO registerRequestDTO){
+       //validamos que el email no este registrado
+        if (usuarioRepository.existsByEmail(registerRequestDTO.getEmail())){
            throw new UserAlreadyRegisterException();
        }
+        //obtenemos el rol usuario
         Roles roles = rolRepository.findByNombre("usuario").orElseThrow(() -> new NoSuchElementException("No se encontro el rol usuario"));
-       Usuarios usuario = new Usuarios();
+      //creamos un usuario y le asignamos los datos
+        Usuarios usuario = new Usuarios();
        usuario.setPrimer_nombre(registerRequestDTO.getPrimer_nombre());
        usuario.setSegundo_nombre(registerRequestDTO.getSegundo_nombre());
        usuario.setPrimer_apellido(registerRequestDTO.getPrimer_apellido());
@@ -97,35 +102,46 @@ public class AuthService {
        usuario.setTelefono(registerRequestDTO.getTelefono());
        usuario.setFecha_nacimiento(registerRequestDTO.getFecha_nacimiento());
        usuario.setGenero(registerRequestDTO.getGenero());
+       //creamos una imagen por defecto y le asignamos el usuario
         Profile_image profileImage = new Profile_image();
         profileImage.setImage_url("https://t4.ftcdn.net/jpg/00/64/67/63/360_F_64676383_LdbmhiNM6Ypzb3FM4PPuFP9rHe7ri8Ju.jpg");
+        profileImage.setUsuarios(usuario);
         profileImageRepository.save(profileImage);
-        usuario.setProfile_image(profileImage);
+        //creamos las credenciales, le asignamos la contraseña, la hasheamos y le asignamos el usuario
        Credenciales credencial = new Credenciales();
        credencial.setContraseña(passwordEncoder.encode(registerRequestDTO.getContraseña()));
+       credencial.setUsuarios(usuario);
        credencialesRepository.save(credencial);
-       usuario.setCredenciales(credencial);
        usuario.setRoles(Collections.singletonList(roles));
-       usuarioRepository.save(usuario);
-       return new AuthResponseDTO(dateFormatter.formatearFecha(), "P-201", usuario.getId(), "Usuario creado correctamente", request.getRequestURI());
+       //guardamos el usuario
+       Usuarios usuarioGuardado = usuarioRepository.save(usuario);
+
+        return usuarioGuardado;
     }
 
+    //metodo para iniciar sesion
     public AuthResponseDTO login(LoginRequestDTO dtoLogin, HttpServletRequest request) throws InvalidCredentialsException {
-                Optional<Usuarios> usuarioOptional = usuarioRepository.findByEmail(dtoLogin.getEmail());
+               //validamos que el usuario exista
+               Optional<Usuarios> usuarioOptional = usuarioRepository.findByEmail(dtoLogin.getEmail());
                 if (usuarioOptional.isEmpty()) {
                     throw new UserNotFoundException();
                 }
-
+               //obtenemos el usuario
                 Usuarios usuario = usuarioOptional.get();
+                //obtenemos la credencial del usuario
                 Credenciales credenciales = credencialesRepository.getPasswordByEmail(usuario.getEmail());
-                Optional<TwoFactorAuth> TwoFactorAuth = twoFactorAuthRepository.findByid_usuario(usuario.getId());
-                 if(TwoFactorAuth.isEmpty() && usuario.getRoles().stream().anyMatch(rol -> rol.getNombre().equals("administrador"))){
-                    throw new IllegalStateException("Los administradores deben tener el 2FA Activado para poder iniciar sesion");
-        }
+                //validamos que la contraseña sea correcta
                 boolean PasswordMatch = passwordEncoder.matches(dtoLogin.getContraseña(), credenciales.getContraseña());
                 if (!PasswordMatch) {
                     throw new InvalidCredentialsException("Contraseña incorrecta");
                 }
+                //validamos si el usuario tiene activado el 2FA
+                Optional<TwoFactorAuth> TwoFactorAuth = twoFactorAuthRepository.findByid_usuario(usuario.getId());
+                //validamos que si el usuario es administrador y no tiene activado el 2FA debe activarlos
+                 if(TwoFactorAuth.isEmpty() && usuario.getRoles().stream().anyMatch(rol -> rol.getNombre().equals("administrador"))){
+                    throw new IllegalStateException("Los administradores deben tener el 2FA Activado para poder iniciar sesion");
+                }
+                 //si el usuario tiene activado el 2FA, tiene que introducir el codigo de verificacion para iniciar sesion
                 if(TwoFactorAuth.isPresent()){
                     AuthenticationCacheDTO authDTO = new AuthenticationCacheDTO();
                     authDTO.setEmail(dtoLogin.getEmail());
@@ -133,6 +149,7 @@ public class AuthService {
                     redisTemplate.opsForValue().set(dtoLogin.getEmail() + "2FA", authDTO, 5, TimeUnit.MINUTES );
                     return new AuthResponseDTO(dateFormatter.formatearFecha(), "P-200", usuario.getId(), "El usuario se ha logeado pero, tiene activado el 2FA, debe introducir el codigo", request.getRequestURI());
         }
+                //iniciamos sesion con los datos de la credencial y le asignamos el token
         Authentication authentication = authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(
                 dtoLogin.getEmail(), dtoLogin.getContraseña()
         ));
@@ -141,92 +158,175 @@ public class AuthService {
         return new AuthResponseDTO(dateFormatter.formatearFecha(), "200", usuario.getId(), token, request.getRequestURI());
     }
 
+    //metodo para recuperar contraseña
     public ResponseDTO OlvidarContraseña(ForgotPasswordRequestDTO forgotPasswordRequestDTO, HttpServletRequest request){
+       //validamos que el email exista
         usuarioRepository.findByEmail(forgotPasswordRequestDTO.getEmail()).orElseThrow(UserNotFoundException::new);
+       //obtenemos el verify code de la cache
         String VerifyCode = resetPasswordService.getData(forgotPasswordRequestDTO.getEmail());
         if(VerifyCode != null) {
             resetPasswordService.deleteData(VerifyCode);
         }
+        //obtenemos el codigo random generado
         String code = resetPasswordService.SetResetCode(forgotPasswordRequestDTO.getEmail());
+        //lo enviamos al email registrado
         emailSenderService.sendRestPasswordEmail(forgotPasswordRequestDTO.getEmail(),code);
+        //retornamos el response
         return setResponseDTO("P-200", "Se ha enviado un codigo de verificacion al correo electronico registrado", request);
     }
 
     public ResponseDTO VerificarCodigo(CodigoRequestDTO codigoRequestDTO, HttpServletRequest request) {
+        // Obtenemos el código almacenado para el email proporcionado
         String code = resetPasswordService.getData(codigoRequestDTO.getEmail());
+
+        // Comprobamos si el código proporcionado por el usuario coincide con el almacenado
         if (!Objects.equals(codigoRequestDTO.getCodigo(), code)) {
+            // Si no coinciden, lanzamos una excepción indicando que el código no es válido
             throw new CodeNotFoundException("El codigo no es valido");
         }
+
+        // Si coinciden, eliminamos el código almacenado
         resetPasswordService.deleteData(codigoRequestDTO.getEmail());
+
+        // Establecemos el estado de verificación del email a "verificado"
         resetPasswordService.setVerifyStatus(codigoRequestDTO.getEmail());
+
+        // Devolvemos un ResponseDTO indicando que la verificación fue exitosa
         return setResponseDTO("P-200", "El codigo de verificacion fue validado correctamente", request);
     }
-    public ResponseDTO CambiarContraseña(ResetPasswordRequestDTO resetPasswordRequestDTO, HttpServletRequest request){
+
+    public ResponseDTO CambiarContraseña(ResetPasswordRequestDTO resetPasswordRequestDTO, HttpServletRequest request) {
+        // Obtenemos el email del objeto resetPasswordRequestDTO
         String email = resetPasswordRequestDTO.getEmail();
+
+        // Verificamos si el usuario existe en la base de datos, si no existe lanzamos una excepción UserNotFoundException
         usuarioRepository.findByEmail(email).orElseThrow(UserNotFoundException::new);
+
+        // Obtenemos el estado de verificación asociado al email
         String VerifyStatus = resetPasswordService.getData(resetPasswordRequestDTO.getEmail());
-        if (!Objects.equals(resetPasswordRequestDTO.getPassword(), resetPasswordRequestDTO.getConfirmPassword())){
+
+        // Comprobamos si las contraseñas proporcionadas coinciden, si no, lanzamos una excepción
+        if (!Objects.equals(resetPasswordRequestDTO.getPassword(), resetPasswordRequestDTO.getConfirmPassword())) {
             throw new IllegalArgumentException("Las contraseñas no coinciden");
         }
-        if (VerifyStatus == null ||  !VerifyStatus.equals("verified")){
+
+        // Verificamos si el estado de verificación es nulo o no es "verified", lanzamos una excepción si es así
+        if (VerifyStatus == null || !VerifyStatus.equals("verified")) {
             throw new IllegalArgumentException("No tienes permiso para realizar esta accion");
         }
+
+        // Obtenemos las credenciales del usuario usando su email
         Credenciales credenciales = credencialesRepository.getPasswordByEmail(email);
+
+        // Verificamos si la nueva contraseña coincide con la actual, lanzamos una excepción si es así
         boolean contraseñaDescifrada = passwordEncoder.matches(resetPasswordRequestDTO.getPassword(), credenciales.getContraseña());
-        if (contraseñaDescifrada){
+        if (contraseñaDescifrada) {
             throw new IllegalArgumentException("La contraseña actual es igual a la nueva");
         }
+
+        // Codificamos la nueva contraseña y la guardamos en la base de datos
         credenciales.setContraseña(passwordEncoder.encode(resetPasswordRequestDTO.getPassword()));
         credencialesRepository.save(credenciales);
+
+        // Eliminamos el estado de verificación asociado al email
         resetPasswordService.deleteData(email);
+
+        // Devolvemos una respuesta indicando que la contraseña ha sido cambiada correctamente
         return setResponseDTO("P-200", "Contraseña cambiada correctamente", request);
     }
+
     public ResponseDTO TotpSetup(Long id_usuario, HttpServletRequest request) throws Exception {
+        // Verificamos si el usuario ya tiene configurado el 2FA
         Optional<TwoFactorAuth> twoFactorAuthOptional = twoFactorAuthRepository.findByid_usuario(id_usuario);
-        if (twoFactorAuthOptional.isPresent()){
+        if (twoFactorAuthOptional.isPresent()) {
+            // Si ya tiene 2FA configurado, lanzamos una excepción
             throw new Exception("Ya tienes seteado el 2FA");
         }
+
+        // Obtenemos el usuario por su ID
         Usuarios usuario = usuarioRepository.getById(id_usuario);
+
+        // Creamos una nueva instancia de TwoFactorAuth
         TwoFactorAuth twoFactor = new TwoFactorAuth();
+
+        // Generamos una clave secreta usando el servicio de Google Authenticator
         twoFactor.setSecretKey(googleAuthenticatorService.generateSecretKey());
+
+        // Asociamos el usuario a la instancia de TwoFactorAuth
         twoFactor.setUsuarios(usuario);
+
+        // Guardamos la configuración de 2FA en el repositorio
         twoFactorAuthRepository.save(twoFactor);
-        String qrCodeurl = qrCodeGenerator.getQRCodeURL(id_usuario,twoFactor.getSecretKey());
+
+        // Generamos la URL del código QR usando el ID de usuario y la clave secreta
+        String qrCodeurl = qrCodeGenerator.getQRCodeURL(id_usuario, twoFactor.getSecretKey());
+        // Generamos la imagen del código QR en bytes
         byte[] QRcode = qrCodeGenerator.generateQRCodeImage(qrCodeurl);
+
+        // Imprimimos el email del usuario en la consola (para debug)
         System.out.println(usuario.getEmail());
+
+        // Enviamos un email al usuario con la imagen del código QR adjunta
         emailSenderService.sendEmailWithQRCode(usuario.getEmail(), QRcode);
-      return setResponseDTO("200", "Se envio el qr  para activar el 2AF al email registrado", request);
+
+        // Devolvemos un ResponseDTO indicando que el QR para activar el 2FA se ha enviado al email registrado
+        return setResponseDTO("200", "Se envio el qr para activar el 2AF al email registrado", request);
     }
 
-    public AuthResponseDTO TotpVerification (Long id_usuario, Codigo2FARequestDTO codigo2FARequestDTO, HttpServletRequest request) throws JsonProcessingException {
+
+    public AuthResponseDTO TotpVerification(Long id_usuario, Codigo2FARequestDTO codigo2FARequestDTO, HttpServletRequest request) throws JsonProcessingException {
+        // Verificamos si el usuario tiene configurado el 2FA
         Optional<TwoFactorAuth> twoFactorAuthOptional = twoFactorAuthRepository.findByid_usuario(id_usuario);
         Optional<Usuarios> usuarioOptional = usuarioRepository.findById(id_usuario);
+
+        // Obtenemos el usuario por su ID
         Usuarios usuario = usuarioOptional.get();
+
+        // Obtenemos el cache de autenticación usando el email del usuario
         AuthenticationCacheDTO userCache = (AuthenticationCacheDTO) redisTemplate.opsForValue().get(usuario.getEmail() + "2FA");
-        if (userCache == null){
+
+        // Si no existe cache de autenticación, lanzamos una excepción no autorizada
+        if (userCache == null) {
             throw new UnauthorizedException("No estas autorizado para usar esto");
         }
-        if (twoFactorAuthOptional.isEmpty()){
-          throw new IllegalArgumentException("No tienes activado el A2F");
+
+        // Si no tiene configurado el 2FA, lanzamos una excepción
+        if (twoFactorAuthOptional.isEmpty()) {
+            throw new IllegalArgumentException("No tienes activado el A2F");
         }
+
+        // Obtenemos la información de 2FA del usuario
         TwoFactorAuth twoFactorAuth = twoFactorAuthOptional.get();
+
+        // Validamos el código 2FA usando la clave secreta y el código proporcionado
         boolean CodeValidate = googleAuthenticatorService.validateCode(twoFactorAuth.getSecretKey(), codigo2FARequestDTO.getCodigo());
-        if (CodeValidate){
+
+        if (CodeValidate) {
+            // Si el código es válido, autenticamos al usuario usando el cache de autenticación
             Authentication authentication = authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(
                     userCache.getEmail(), userCache.getContraseña()
             ));
             SecurityContextHolder.getContext().setAuthentication(authentication);
+
+            // Generamos un token JWT para el usuario autenticado
             String token = jwtTokenProvider.generateToken(authentication);
-           redisTemplate.delete("2FA"+ usuario.getEmail());
+
+            // Eliminamos el cache de 2FA del usuario
+            redisTemplate.delete("2FA" + usuario.getEmail());
+
+            // Devolvemos un AuthResponseDTO indicando que el 2FA fue verificado y el token generado
             return new AuthResponseDTO(dateFormatter.formatearFecha(), "200", id_usuario, token, request.getRequestURI());
         } else {
+            // Si el código no es válido, lanzamos una excepción de código 2FA no válido
             throw new Code2FAException("El codigo de verificacion no es valido");
         }
     }
 
-    private ResponseDTO setResponseDTO(String code, String message, HttpServletRequest request){
+    // Método privado para crear un ResponseDTO con la fecha, código y mensaje proporcionados
+    private ResponseDTO setResponseDTO(String code, String message, HttpServletRequest request) {
         return new ResponseDTO(dateFormatter.formatearFecha(), code, message, request.getRequestURI());
     }
+
 
 
 }

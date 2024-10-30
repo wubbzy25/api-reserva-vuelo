@@ -12,7 +12,7 @@ import java.util.Objects;
 
 @Getter
 @Setter
-@ToString
+@ToString(exclude =  "usuarios")
 @Entity
 @Table(name = "credenciales")
 public class Credenciales {

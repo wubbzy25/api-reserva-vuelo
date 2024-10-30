@@ -1,9 +1,10 @@
 package com.api.reservavuelos.Services;
-
+//importamos las librerias necesarias
 import com.api.reservavuelos.DTO.Cache.ProfileCacheDTO;
 import com.api.reservavuelos.DTO.Request.ProfileRequestDTO;
 import com.api.reservavuelos.DTO.Response.ResponseDTO;
 import com.api.reservavuelos.Exceptions.UserNotFoundException;
+import com.api.reservavuelos.Mappers.ProfileMapper;
 import com.api.reservavuelos.Models.Profile_image;
 import com.api.reservavuelos.Models.Usuarios;
 import com.api.reservavuelos.Repositories.UsuarioRepository;
@@ -19,7 +20,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
-import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.CachePut;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.core.io.ByteArrayResource;
@@ -34,9 +34,10 @@ import org.springframework.web.multipart.MultipartFile;
 import java.security.MessageDigest;
 import java.util.Map;
 
+//definimos la clase ProfileService y le colocamos @Service para que Spring lo reconozca como un servicio
 @Service
 public class ProfileService {
-
+    //declaramos los servicios, repositorios o interfaces necesarios para utilizarlos
     private final DateFormatter dateFormatter;
     private final CloudinaryService cloudinaryService;
     private final UsuarioRepository usuarioRepository;
@@ -46,12 +47,16 @@ public class ProfileService {
     private final CacheManager cacheManager;
     private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper;
+    private final ProfileMapper profileMapper;
+    //definimos la variables de la key de virustotal
     @Value("${virustotal.api.key}")
     private String apiKey;
 
+    //definimos las constantes de tipos de imagen
     private static final String JPEG = "image/jpeg";
     private static final String PNG = "image/png";
 
+    //aplicamos inyeccion de dependencias por medio del contructor
     @Autowired
     public ProfileService(CloudinaryService cloudinaryService,
                           UsuarioRepository usuarioRepository,
@@ -61,7 +66,8 @@ public class ProfileService {
                           DateFormatter dateFormatter,
                           CacheManager cacheManager,
                           RestTemplate restTemplate,
-                          ObjectMapper objectMapper) {
+                          ObjectMapper objectMapper,
+                          ProfileMapper profileMapper) {
         this.cloudinaryService = cloudinaryService;
         this.usuarioRepository = usuarioRepository;
         this.jwtTokenProvider = jwtTokenProvider;
@@ -71,8 +77,10 @@ public class ProfileService {
         this.cacheManager = cacheManager;
         this.restTemplate = restTemplate;
         this.objectMapper = objectMapper;
+        this.profileMapper = profileMapper;
     }
 
+    //metodo para obtener el perfil del usuario, y guardarlo en cache
     @Cacheable(value = "ProfileCache", key = "#id")
     public ProfileCacheDTO getProfile(Long id) {
         Usuarios usuario = usuarioRepository.findById(id)
@@ -86,17 +94,12 @@ public class ProfileService {
         return createProfileCacheDTO(profileImage.getImage_url(), usuario, nombreCompleto);
     }
 
+    //metodo para actualizar el perfil del usuario, y actualizar la cache
     @CachePut(value = "ProfileCache", key = "#id")
     public ProfileCacheDTO updateProfile(Long id, ProfileRequestDTO profileRequestDTO) {
         Usuarios usuario = usuarioRepository.findById(id)
                 .orElseThrow(UserNotFoundException::new);
-        usuario.setPrimer_nombre(profileRequestDTO.getPrimer_nombre());
-        usuario.setSegundo_nombre(profileRequestDTO.getSegundo_nombre());
-        usuario.setPrimer_apellido(profileRequestDTO.getPrimer_apellido());
-        usuario.setSegundo_apellido(profileRequestDTO.getSegundo_apellido());
-        usuario.setTelefono(profileRequestDTO.getTelefono());
-        usuario.setFecha_nacimiento(profileRequestDTO.getFecha_nacimiento());
-        usuario.setGenero(profileRequestDTO.getGenero());
+       profileMapper.updateProfileFromDto(profileRequestDTO, usuario);
         usuarioRepository.save(usuario);
 
         String nombreCompleto = String.format("%s %s %s %s",
@@ -109,8 +112,12 @@ public class ProfileService {
         return createProfileCacheDTO(profileImage, usuario, nombreCompleto);
     }
 
+
+    //metodo para subir la imagen del perfil del usuario, y actualizar la cache
     public ResponseDTO uploadImage(MultipartFile multipartFile, HttpServletRequest request, HttpServletResponse response) throws Exception {
+        //validamos el tipo de archivo
         validateFileType(multipartFile.getContentType());
+        //validamos que el archivo no sea un archivo dañino
         String fileHash = getFileHash(multipartFile);
         if(!isFileSafe(fileHash, multipartFile)){
             throw new IllegalArgumentException("Este archivo puede contener malware");
@@ -129,6 +136,7 @@ public class ProfileService {
             cloudinaryService.delete(profileImage.getPublic_id());
         }
 
+        //subimos la imagen a cloudinary y guardamos el url en la base de datos
         Map uploadResult = cloudinaryService.upload(multipartFile);
         String url = (String) uploadResult.get("url");
         String publicId = (String) uploadResult.get("public_id");
@@ -147,6 +155,7 @@ public class ProfileService {
         return new ResponseDTO(dateFormatter.formatearFecha(), "P-200", "La imagen fue subida correctamente", request.getRequestURI());
     }
 
+    //metodo para crear el dto de la cache del perfil del usuario
     private ProfileCacheDTO createProfileCacheDTO(String imageUrl, Usuarios usuario, String nombreCompleto) {
         ProfileCacheDTO profile = new ProfileCacheDTO();
         profile.setId_usuario(usuario.getId());
@@ -163,6 +172,7 @@ public class ProfileService {
         return profile;
     }
 
+    //metod opara actualizar la cache del perfil del usuario
     private void updateProfileCache(Long id, ProfileCacheDTO profileCacheDTO) {
         Cache cache = cacheManager.getCache("ProfileCache");
         if (cache != null) {
@@ -170,12 +180,14 @@ public class ProfileService {
         }
     }
 
+    //metodo para validar el tipo de archivo
     private void validateFileType(String contentType) {
         if ((!JPEG.equals(contentType) && !PNG.equals(contentType))) {
             throw new IllegalArgumentException("El tipo de archivo no es válido. Sólo se permiten imágenes en formato JPEG o PNG.");
         }
     }
 
+    //metodo para validar que el archivo no sea dañino
     private boolean isFileSafe(String fileHash, MultipartFile file) {
         try {
             String url = "https://www.virustotal.com/api/v3/files/" + fileHash;

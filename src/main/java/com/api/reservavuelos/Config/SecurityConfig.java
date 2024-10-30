@@ -26,10 +26,19 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 public class SecurityConfig {
 
     private final jwtAuthenticationEntryPoint authenticationEntryPoint;
+    private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final URLFilter urlFilter;
+    private final JwtValidationFilter jwtvalidationFilter;
 
     @Autowired
-    public SecurityConfig(jwtAuthenticationEntryPoint authenticationEntryPoint) {
+    public SecurityConfig(jwtAuthenticationEntryPoint authenticationEntryPoint,
+                          JwtAuthenticationFilter jwtAuthenticationFilter,
+                          URLFilter urlFilter,
+                          JwtValidationFilter jwtvalidationFilter) {
         this.authenticationEntryPoint = authenticationEntryPoint;
+        this.jwtAuthenticationFilter = jwtAuthenticationFilter;
+        this.urlFilter = urlFilter;
+        this.jwtvalidationFilter = jwtvalidationFilter;
     }
 
     @Bean
@@ -45,34 +54,15 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.DELETE, "api/v1/vuelos/vuelo/**").hasAuthority("administrador")
                         .anyRequest().authenticated()
                 );
-                Http.addFilterBefore(urlFilter(), UsernamePasswordAuthenticationFilter.class);
-                Http.addFilterBefore(jwtvalidationFilter(), UsernamePasswordAuthenticationFilter.class);
-                Http.addFilterBefore(jwtAuthenticationFilter(), UsernamePasswordAuthenticationFilter.class);
+                Http.addFilterBefore(urlFilter, UsernamePasswordAuthenticationFilter.class);
+                Http.addFilterBefore(jwtvalidationFilter, UsernamePasswordAuthenticationFilter.class);
+                Http.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
         return Http.build();
     }
 
     @Bean
     AuthenticationManager authenticationManager(AuthenticationConfiguration authenticationConfiguration) throws Exception {
         return authenticationConfiguration.getAuthenticationManager();
-    }
-
-    @Bean
-    PasswordEncoder passwordEncoder(){
-        return new BCryptPasswordEncoder();
-    }
-    @Bean
-    JwtAuthenticationFilter jwtAuthenticationFilter(){
-        return new JwtAuthenticationFilter();
-    }
-
-    @Bean
-    URLFilter urlFilter(){
-        return new URLFilter();
-    }
-
-    @Bean
-    JwtValidationFilter jwtvalidationFilter(){
-        return new JwtValidationFilter();
     }
 
 }

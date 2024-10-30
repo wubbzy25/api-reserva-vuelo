@@ -7,8 +7,9 @@ import lombok.Data;
 
 @Data
 public class ReservaRequestDTO {
+    @NotNull
+    private Long id_usuario;
     @NotEmpty(message = "La clase no puede estar vacia")
-    @ValidClase
     private String clase;
     @NotNull
     private int numero_asiento;

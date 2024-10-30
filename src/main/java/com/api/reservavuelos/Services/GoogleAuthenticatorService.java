@@ -1,20 +1,27 @@
 package com.api.reservavuelos.Services;
 
+// Importamos las librerías necesarias
 import com.warrenstrange.googleauth.GoogleAuthenticator;
 import com.warrenstrange.googleauth.GoogleAuthenticatorKey;
 import org.springframework.stereotype.Service;
 
+// Definimos la clase GoogleAuthenticatorService y la anotamos con @Service para que Spring la reconozca como un servicio
 @Service
 public class GoogleAuthenticatorService {
+    // Declaramos el GoogleAuthenticator
     private final GoogleAuthenticator gAuth = new GoogleAuthenticator();
 
-    public String generateSecretKey(){
-    GoogleAuthenticatorKey key = gAuth.createCredentials();
-    return key.getKey();
+    // Método para generar una clave secreta
+    public String generateSecretKey() {
+        // Creamos las credenciales del autenticador de Google
+        GoogleAuthenticatorKey key = gAuth.createCredentials();
+        // Devolvemos la clave secreta generada
+        return key.getKey();
     }
 
-    public boolean validateCode(String secretKey, int code){
-     return gAuth.authorize(secretKey, code);
+    // Método para validar el código
+    public boolean validateCode(String secretKey, int code) {
+        // Autorizamos el código utilizando la clave secreta
+        return gAuth.authorize(secretKey, code);
     }
-
 }

@@ -1,15 +1,17 @@
 package com.api.reservavuelos.Utils;
 
-
+//importamos las librerias necesarias
 import org.springframework.context.annotation.Bean;
 import org.springframework.stereotype.Component;
 
 import java.util.Arrays;
 import java.util.List;
 
+//definimos la clase Url_WhiteList y le colocamos @component para que spring lo reconozca
 @Component
 public class Url_WhiteList {
 
+    //definimos el metodo que va a devolver la lista de urls
     @Bean
     public List<String> Url_whiteList() {
         return Arrays.asList(

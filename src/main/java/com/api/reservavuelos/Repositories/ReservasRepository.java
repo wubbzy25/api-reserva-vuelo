@@ -10,8 +10,6 @@ import java.util.Optional;
 @Repository
 public interface ReservasRepository extends JpaRepository<Reservas, Long> {
 
-
-
     @Query(
             value = "SELECT COUNT(*) FROM reservas WHERE id_vuelo = :idVuelo AND clase = 'bussiness'",
             nativeQuery = true
@@ -23,9 +21,17 @@ public interface ReservasRepository extends JpaRepository<Reservas, Long> {
     )
     int getEconomyClassByidVuelo(Long idVuelo);
     @Query(
-            value = "SELECT * FROM reservas WHERE numero_asiento = :numeroAsiento",
+            value = "SELECT * FROM reservas WHERE numero_asiento = :numeroAsiento AND clase = :clase",
             nativeQuery = true
 
     )
-    Optional<Reservas> findByNumeroAsiento(int numeroAsiento);
+    Optional<Reservas> findByNumeroAsientoAndClase(int numeroAsiento, String clase);
+    @Query(
+            value = "SELECT * FROM reservas WHERE id_vuelo = :idVuelo AND estado = 'RESERVADO'",
+            nativeQuery = true
+    )
+    Reservas getAsientosReservadosByidVuelo(Long idVuelo);
+    //int getAsientosDisponiblesByidVuelo(Long idVuelo);
+
+
 }

@@ -2,7 +2,9 @@ package com.api.reservavuelos.Controllers;
 import com.api.reservavuelos.DTO.Request.*;
 import com.api.reservavuelos.DTO.Response.AuthResponseDTO;
 import com.api.reservavuelos.DTO.Response.ResponseDTO;
+import com.api.reservavuelos.Models.Usuarios;
 import com.api.reservavuelos.Services.AuthService;
+import com.api.reservavuelos.Utils.DateFormatter;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
@@ -17,9 +19,11 @@ import org.springframework.web.bind.annotation.*;
 public class AuthController {
 
   private final AuthService authService;
+  private final DateFormatter dateFormatter;
   @Autowired
-  public AuthController(AuthService authService){
+  public AuthController(AuthService authService, DateFormatter dateFormatter){
     this.authService = authService;
+    this.dateFormatter = dateFormatter;
   }
     @PostMapping("login")
     public ResponseEntity<AuthResponseDTO> IniciarSesion(@Valid @RequestBody LoginRequestDTO loginRequestDto, HttpServletRequest request) throws InvalidCredentialsException {
@@ -28,7 +32,8 @@ public class AuthController {
 
     @PostMapping("register")
     public ResponseEntity<AuthResponseDTO> Registrar(@Valid @RequestBody RegisterRequestDTO registerRequestDTO, HttpServletRequest request){
-        return new ResponseEntity<>(authService.registrarUsuario(registerRequestDTO,request), HttpStatus.CREATED);
+      Usuarios usuario = authService.registrarUsuario(registerRequestDTO);
+        return new ResponseEntity<>(new AuthResponseDTO(dateFormatter.formatearFecha(), "P-201", usuario.getId(), "Usuario creado correctamente", request.getRequestURI()), HttpStatus.CREATED);
     }
 
 
