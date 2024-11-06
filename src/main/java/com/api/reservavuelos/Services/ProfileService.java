@@ -100,16 +100,16 @@ public class ProfileService {
         Usuarios usuario = usuarioRepository.findById(id)
                 .orElseThrow(UserNotFoundException::new);
        profileMapper.updateProfileFromDto(profileRequestDTO, usuario);
-        usuarioRepository.save(usuario);
+        Usuarios usuarioGuardado = usuarioRepository.save(usuario);
 
         String nombreCompleto = String.format("%s %s %s %s",
-                usuario.getPrimer_nombre(),
-                usuario.getSegundo_nombre(),
-                usuario.getPrimer_apellido(),
-                usuario.getSegundo_apellido());
-        String profileImage = profileImageRepository.getProfileImage(usuario.getEmail()).getImage_url();
+                usuarioGuardado.getPrimer_nombre(),
+                usuarioGuardado.getSegundo_nombre(),
+                usuarioGuardado.getPrimer_apellido(),
+                usuarioGuardado.getSegundo_apellido());
+        String profileImage = profileImageRepository.getProfileImage(usuarioGuardado.getEmail()).getImage_url();
 
-        return createProfileCacheDTO(profileImage, usuario, nombreCompleto);
+        return createProfileCacheDTO(profileImage, usuarioGuardado, nombreCompleto);
     }
 
 
@@ -131,7 +131,6 @@ public class ProfileService {
         if (profileImage == null) {
             throw new IllegalArgumentException("Profile image not found");
         }
-
         if (profileImage.getPublic_id() != null) {
             cloudinaryService.delete(profileImage.getPublic_id());
         }
@@ -188,15 +187,13 @@ public class ProfileService {
     }
 
     //metodo para validar que el archivo no sea dañino
-    private boolean isFileSafe(String fileHash, MultipartFile file) {
+     boolean isFileSafe(String fileHash, MultipartFile file) {
         try {
             String url = "https://www.virustotal.com/api/v3/files/" + fileHash;
             HttpHeaders headers = new HttpHeaders();
             headers.set("x-apikey", apiKey);
-
             HttpEntity<String> entity = new HttpEntity<>(headers);
             ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.GET, entity, String.class);
-
             String responseBody = response.getBody();
             int positives = extractPositivesFromResponse(responseBody);
             return positives == 0;

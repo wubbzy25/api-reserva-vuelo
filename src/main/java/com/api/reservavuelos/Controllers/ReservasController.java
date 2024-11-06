@@ -3,7 +3,6 @@ package com.api.reservavuelos.Controllers;
 import com.api.reservavuelos.DTO.Request.ReservaRequestDTO;
 import com.api.reservavuelos.DTO.Response.ResponseDTO;
 import com.api.reservavuelos.Services.ReservasService;
-import com.stripe.exception.StripeException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -28,7 +27,7 @@ public class ReservasController {
     }
 
     @DeleteMapping("/cancelar/{id_reserva}")
-    public ResponseEntity<ResponseDTO> cancelarReserva(@PathVariable Long id_reserva, HttpServletRequest request) throws StripeException {
+    public ResponseEntity<ResponseDTO> cancelarReserva(@PathVariable Long id_reserva, HttpServletRequest request)  {
         return new ResponseEntity<>(reservasService.cancelarReserva(id_reserva, request), HttpStatus.OK);
     }
 

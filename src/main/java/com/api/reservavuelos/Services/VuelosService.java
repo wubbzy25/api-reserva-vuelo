@@ -89,7 +89,6 @@ public class VuelosService {
     }
     //metodo para crear un vuelo
     public ResponseDTO crearVuelo(VuelosRequestDTO vueloRequest, HttpServletRequest request){
-        try {
             //obtenemos el vuelo a crear con el numero de vuelo
            Optional<Vuelos> vueloOptional = vuelosRepository.getVuelosByNumeroVuelo(vueloRequest.getNumeroVuelo());
             //si vueloOptional no esta vacio significa que el vuelo ya existe entonces lanzamos una excepcion
@@ -104,9 +103,6 @@ public class VuelosService {
            setListVueloCache();
            //retornamos un mensaje de exito y el request para poder capturarlo en el log
            return setResponseDTO("P-201", "Vuelo creado correctamente", request);
-        } catch (Exception e){
-            throw new IllegalArgumentException(e.getMessage());
-        }
     }
 
     //metodo para obtener los asientos de un vuelo
@@ -131,7 +127,7 @@ public class VuelosService {
             Optional<Reservas> reservaOptional = reservasRepository.findByNumeroAsientoAndClase(i, "bussiness");
             //si reservaOptional no esta vacio significa que el asiento esta ocupado
             if (reservaOptional.isPresent()) {
-                    asientosOcupados.add(new AsientosResponseDTO(i, "Bussiness", "Ocupado"));
+                asientosOcupados.add(new AsientosResponseDTO(i, "Bussiness", "Ocupado"));
             } else {
                 asientosDisponibles.add(new AsientosResponseDTO(i, "Bussiness", "Disponible"));
             }
@@ -142,7 +138,7 @@ public class VuelosService {
             Optional<Reservas> reservaOptional = reservasRepository.findByNumeroAsientoAndClase(i, "economy");
             //si reservaOptional no esta vacio significa que el asiento esta ocupado
             if (reservaOptional.isPresent()) {
-                    asientosOcupados.add(new AsientosResponseDTO(i, "Economy", "Ocupado"));
+                asientosOcupados.add(new AsientosResponseDTO(i, "Economy", "Ocupado"));
             } else {
                 asientosDisponibles.add(new AsientosResponseDTO(i, "Economy", "Disponible"));
             }
@@ -214,7 +210,6 @@ public class VuelosService {
  }
  //metodo para eliminar un vuelo
     public ResponseDTO eliminarVuelo(Long id_vuelo, HttpServletRequest request){
-        try {
             //buscamos el vuelo por su id
             Optional<Vuelos> vueloOptional = vuelosRepository.findById(id_vuelo);
             //si vueloOptional esta vacio significa que no existe entonces lanzamos una excepcion
@@ -225,9 +220,6 @@ public class VuelosService {
                 vuelosRepository.deleteById(id_vuelo);
             //actualizamos el cache de vuelos
                 setListVueloCache();
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
         //retornamos un mensaje de exito
         return setResponseDTO("P-200", "El vuelo fue eliminado correctamente", request);
     }

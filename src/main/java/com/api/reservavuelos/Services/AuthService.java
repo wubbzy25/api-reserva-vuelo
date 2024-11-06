@@ -13,6 +13,7 @@ import com.api.reservavuelos.Utils.DateFormatter;
 import com.api.reservavuelos.Utils.QRCodeGenerator;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.zxing.WriterException;
 import jakarta.servlet.http.HttpServletRequest;
 import org.apache.hc.client5.http.auth.InvalidCredentialsException;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -24,6 +25,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.io.IOException;
 import java.util.Collections;
 import java.util.NoSuchElementException;
 import java.util.Objects;
@@ -159,25 +161,28 @@ public class AuthService {
     }
 
     //metodo para recuperar contraseña
-    public ResponseDTO OlvidarContraseña(ForgotPasswordRequestDTO forgotPasswordRequestDTO, HttpServletRequest request){
-       //validamos que el email exista
-        usuarioRepository.findByEmail(forgotPasswordRequestDTO.getEmail()).orElseThrow(UserNotFoundException::new);
-       //obtenemos el verify code de la cache
-        String VerifyCode = resetPasswordService.getData(forgotPasswordRequestDTO.getEmail());
-        if(VerifyCode != null) {
-            resetPasswordService.deleteData(VerifyCode);
+        public ResponseDTO OlvidarContraseña(ForgotPasswordRequestDTO forgotPasswordRequestDTO, HttpServletRequest request){
+           //validamos que el email exista
+            usuarioRepository.findByEmail(forgotPasswordRequestDTO.getEmail()).orElseThrow(UserNotFoundException::new);
+           //obtenemos el email asociado del verify code de la cache para verificar si tiene un codigo
+            String VerifyCode = resetPasswordService.getData(forgotPasswordRequestDTO.getEmail());
+            if(VerifyCode != null) {
+                resetPasswordService.deleteData(VerifyCode);
+            }
+            //obtenemos el codigo random generado
+            String code = resetPasswordService.SetResetCode(forgotPasswordRequestDTO.getEmail());
+            //lo enviamos al email registrado
+            emailSenderService.sendRestPasswordEmail(forgotPasswordRequestDTO.getEmail(),code);
+            //retornamos el response
+            return setResponseDTO("P-200", "Se ha enviado un codigo de verificacion al correo electronico registrado", request);
         }
-        //obtenemos el codigo random generado
-        String code = resetPasswordService.SetResetCode(forgotPasswordRequestDTO.getEmail());
-        //lo enviamos al email registrado
-        emailSenderService.sendRestPasswordEmail(forgotPasswordRequestDTO.getEmail(),code);
-        //retornamos el response
-        return setResponseDTO("P-200", "Se ha enviado un codigo de verificacion al correo electronico registrado", request);
-    }
 
     public ResponseDTO VerificarCodigo(CodigoRequestDTO codigoRequestDTO, HttpServletRequest request) {
         // Obtenemos el código almacenado para el email proporcionado
         String code = resetPasswordService.getData(codigoRequestDTO.getEmail());
+        if (code == null){
+            throw new CodeNotFoundException("No se ha enviado ningun codigo");
+        }
 
         // Comprobamos si el código proporcionado por el usuario coincide con el almacenado
         if (!Objects.equals(codigoRequestDTO.getCodigo(), code)) {
@@ -200,15 +205,15 @@ public class AuthService {
         String email = resetPasswordRequestDTO.getEmail();
 
         // Verificamos si el usuario existe en la base de datos, si no existe lanzamos una excepción UserNotFoundException
-        usuarioRepository.findByEmail(email).orElseThrow(UserNotFoundException::new);
-
-        // Obtenemos el estado de verificación asociado al email
-        String VerifyStatus = resetPasswordService.getData(resetPasswordRequestDTO.getEmail());
+       Usuarios usuario =  usuarioRepository.findByEmail(email).orElseThrow(UserNotFoundException::new);
 
         // Comprobamos si las contraseñas proporcionadas coinciden, si no, lanzamos una excepción
         if (!Objects.equals(resetPasswordRequestDTO.getPassword(), resetPasswordRequestDTO.getConfirmPassword())) {
             throw new IllegalArgumentException("Las contraseñas no coinciden");
         }
+
+        // Obtenemos el estado de verificación asociado al email
+        String VerifyStatus = resetPasswordService.getData(resetPasswordRequestDTO.getEmail());
 
         // Verificamos si el estado de verificación es nulo o no es "verified", lanzamos una excepción si es así
         if (VerifyStatus == null || !VerifyStatus.equals("verified")) {
@@ -216,7 +221,7 @@ public class AuthService {
         }
 
         // Obtenemos las credenciales del usuario usando su email
-        Credenciales credenciales = credencialesRepository.getPasswordByEmail(email);
+        Credenciales credenciales = credencialesRepository.getPasswordByEmail(usuario.getEmail());
 
         // Verificamos si la nueva contraseña coincide con la actual, lanzamos una excepción si es así
         boolean contraseñaDescifrada = passwordEncoder.matches(resetPasswordRequestDTO.getPassword(), credenciales.getContraseña());
@@ -235,12 +240,12 @@ public class AuthService {
         return setResponseDTO("P-200", "Contraseña cambiada correctamente", request);
     }
 
-    public ResponseDTO TotpSetup(Long id_usuario, HttpServletRequest request) throws Exception {
+    public ResponseDTO TotpSetup(Long id_usuario, HttpServletRequest request) throws IOException, WriterException {
         // Verificamos si el usuario ya tiene configurado el 2FA
         Optional<TwoFactorAuth> twoFactorAuthOptional = twoFactorAuthRepository.findByid_usuario(id_usuario);
         if (twoFactorAuthOptional.isPresent()) {
             // Si ya tiene 2FA configurado, lanzamos una excepción
-            throw new Exception("Ya tienes seteado el 2FA");
+            throw new IllegalArgumentException("Ya tienes seteado el 2FA");
         }
 
         // Obtenemos el usuario por su ID
@@ -262,22 +267,29 @@ public class AuthService {
         String qrCodeurl = qrCodeGenerator.getQRCodeURL(id_usuario, twoFactor.getSecretKey());
         // Generamos la imagen del código QR en bytes
         byte[] QRcode = qrCodeGenerator.generateQRCodeImage(qrCodeurl);
-
-        // Imprimimos el email del usuario en la consola (para debug)
-        System.out.println(usuario.getEmail());
+        
 
         // Enviamos un email al usuario con la imagen del código QR adjunta
         emailSenderService.sendEmailWithQRCode(usuario.getEmail(), QRcode);
 
         // Devolvemos un ResponseDTO indicando que el QR para activar el 2FA se ha enviado al email registrado
-        return setResponseDTO("200", "Se envio el qr para activar el 2AF al email registrado", request);
+        return setResponseDTO("P-200", "Se envio el qr para activar el 2AF al email registrado", request);
     }
 
 
     public AuthResponseDTO TotpVerification(Long id_usuario, Codigo2FARequestDTO codigo2FARequestDTO, HttpServletRequest request) throws JsonProcessingException {
+        Optional<Usuarios> usuarioOptional = usuarioRepository.findById(id_usuario);
+        if (usuarioOptional.isEmpty()) {
+            // Si no existe el usuario, lanzamos una excepción no autorizada
+            throw new UserNotFoundException();
+        }
+
         // Verificamos si el usuario tiene configurado el 2FA
         Optional<TwoFactorAuth> twoFactorAuthOptional = twoFactorAuthRepository.findByid_usuario(id_usuario);
-        Optional<Usuarios> usuarioOptional = usuarioRepository.findById(id_usuario);
+        if (twoFactorAuthOptional.isEmpty()) {
+            // Si no tiene 2FA configurado, lanzamos una excepción
+            throw new IllegalArgumentException("No tienes activado el 2 FA");
+        }
 
         // Obtenemos el usuario por su ID
         Usuarios usuario = usuarioOptional.get();
@@ -288,11 +300,6 @@ public class AuthService {
         // Si no existe cache de autenticación, lanzamos una excepción no autorizada
         if (userCache == null) {
             throw new UnauthorizedException("No estas autorizado para usar esto");
-        }
-
-        // Si no tiene configurado el 2FA, lanzamos una excepción
-        if (twoFactorAuthOptional.isEmpty()) {
-            throw new IllegalArgumentException("No tienes activado el A2F");
         }
 
         // Obtenemos la información de 2FA del usuario
@@ -315,7 +322,7 @@ public class AuthService {
             redisTemplate.delete("2FA" + usuario.getEmail());
 
             // Devolvemos un AuthResponseDTO indicando que el 2FA fue verificado y el token generado
-            return new AuthResponseDTO(dateFormatter.formatearFecha(), "200", id_usuario, token, request.getRequestURI());
+            return new AuthResponseDTO(dateFormatter.formatearFecha(), "P-200", id_usuario, token, request.getRequestURI());
         } else {
             // Si el código no es válido, lanzamos una excepción de código 2FA no válido
             throw new Code2FAException("El codigo de verificacion no es valido");

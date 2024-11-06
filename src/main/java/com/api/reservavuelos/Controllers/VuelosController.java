@@ -46,7 +46,7 @@ public class VuelosController {
 
     //admin controllers
     @PostMapping("/vuelo/crear")
-    public ResponseEntity<ResponseDTO> crearVuelo(@Valid @RequestBody VuelosRequestDTO vuelo, HttpServletRequest request){
+    public ResponseEntity<ResponseDTO> crearVuelo(@Valid @RequestBody VuelosRequestDTO vuelo, HttpServletRequest request) throws Exception {
         return new ResponseEntity<>(vuelosService.crearVuelo(vuelo,request), HttpStatus.OK);
     }
 

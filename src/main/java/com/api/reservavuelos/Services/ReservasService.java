@@ -33,7 +33,7 @@ public class ReservasService {
         this.usuarioRepository = usuarioRepository;
     }
 
-    // Método para reservar un vuelo
+    // Metodo para reservar un vuelo
     public ResponseDTO reservarVuelo(Long id_vuelo, ReservaRequestDTO reservaRequestDTO, HttpServletRequest request) {
         // Verificamos si el vuelo existe
         Optional<Vuelos> vueloOptional = vuelosRepository.findById(id_vuelo);
@@ -64,12 +64,12 @@ public class ReservasService {
         }
 
         // Verificamos si hay asientos disponibles en la clase Business
-        if (reservasBussinesClass >= getBussinessCapacity) {
+        if (reservasBussinesClass >= getBussinessCapacity && Objects.equals(reservaRequestDTO.getClase(), "bussiness")) {
             throw new IllegalArgumentException("Los asientos de bussines class ya estan completamente llenos");
         }
 
         // Verificamos si hay asientos disponibles en la clase Economy
-        if (reservasEconomyClass >= getEconomyCapacity) {
+        if (reservasEconomyClass >= getEconomyCapacity && Objects.equals(reservaRequestDTO.getClase(), "economy")) {
             throw new IllegalArgumentException("Los asientos economy class ya estan completamente llenos");
         }
 

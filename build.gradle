@@ -23,7 +23,11 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-web'
     implementation 'com.fasterxml.jackson.core:jackson-databind:2.18.0'
     implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.18.0'
-    implementation group: 'com.stripe', name: 'stripe-java', version: '27.2.0-beta.3'
+    // https://mvnrepository.com/artifact/org.powermock/powermock-api-mockito2
+    testImplementation group: 'org.powermock', name: 'powermock-api-mockito2', version: '2.0.9'
+// https://mvnrepository.com/artifact/org.powermock/powermock-module-junit4
+    testImplementation group: 'org.powermock', name: 'powermock-module-junit4', version: '2.0.9'
+
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
     implementation 'org.mapstruct:mapstruct:1.6.2'
     implementation 'io.jsonwebtoken:jjwt-api:0.12.6'
