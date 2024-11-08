@@ -184,7 +184,7 @@ class ProfileServiceTest {
 
         when(restTemplate.exchange(eq(url), eq(HttpMethod.GET), eq(entity), eq(String.class))).thenReturn(responseEntity);
         // Ensure you are only stubbing what is necessary
-        when(getTokenForRequest.getToken(request, response)).thenReturn("token");
+        when(getTokenForRequest.getToken(request)).thenReturn("token");
         when(jwtTokenProvider.getEmailFromToken(anyString())).thenReturn(null);
         when(usuarioRepository.findById(anyLong())).thenReturn(Optional.empty());
 
@@ -193,7 +193,7 @@ class ProfileServiceTest {
 
         // Verify interactions
         verify(usuarioRepository, times(1)).findById(anyLong());
-        verify(getTokenForRequest, times(1)).getToken(request, response);
+        verify(getTokenForRequest, times(1)).getToken(request);
         verify(jwtTokenProvider, times(1)).getEmailFromToken(anyString());
     }
     @Test

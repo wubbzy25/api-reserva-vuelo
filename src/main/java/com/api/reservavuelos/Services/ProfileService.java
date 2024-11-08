@@ -122,7 +122,7 @@ public class ProfileService {
         if(!isFileSafe(fileHash, multipartFile)){
             throw new IllegalArgumentException("Este archivo puede contener malware");
         }
-        String token = getTokenForRequest.getToken(request, response);
+        String token = getTokenForRequest.getToken(request);
         String email = jwtTokenProvider.getEmailFromToken(token);
         Usuarios usuario = usuarioRepository.findByEmail(email)
                 .orElseThrow(UserNotFoundException::new);

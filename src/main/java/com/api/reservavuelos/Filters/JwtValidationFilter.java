@@ -62,7 +62,7 @@ public class JwtValidationFilter extends OncePerRequestFilter {
 
         try {
             // Obtenemos el token de la solicitud
-            String token = GetTokenForRequest.getToken(request, response);
+            String token = GetTokenForRequest.getToken(request);
 
             // Verificamos si el token está presente
             if (token == null || token.isEmpty()) {

@@ -14,39 +14,29 @@ import com.api.reservavuelos.Utils.DateFormatter;
 import com.api.reservavuelos.Utils.QRCodeGenerator;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.google.zxing.WriterException;
-import io.lettuce.core.Value;
 import jakarta.servlet.http.HttpServletRequest;
 import org.apache.hc.client5.http.auth.InvalidCredentialsException;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.junit.jupiter.params.shadow.com.univocity.parsers.common.ArgumentUtils;
 import org.mockito.*;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.data.redis.core.RedisOperations;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContext;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
-import javax.xml.crypto.Data;
+
 import java.io.IOException;
 import java.text.ParseException;
-import java.text.SimpleDateFormat;
-import java.util.Date;
 import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
-import static org.powermock.configuration.ConfigurationType.PowerMock;
 
 
 @ExtendWith(MockitoExtension.class)

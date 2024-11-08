@@ -52,7 +52,7 @@
 
          //definimos el filtro para validar el token y decidir si el usuario se autentica o no
          @Override
-        protected void doFilterInternal(@NonNull HttpServletRequest request, @NonNull HttpServletResponse response, @NonNull FilterChain filterChain) throws ServletException, IOException {
+        protected void doFilterInternal(HttpServletRequest request,  HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
             //verificamos si la url desde se realizo la peticion es una url que necesita autenticacion, si no, entonces pasa al siguiente filtro
              String requestURI = request.getRequestURI();
             if(urlWhiteList.Url_whiteList().contains(requestURI)){
@@ -61,7 +61,7 @@
             }
 
             //obtenemos el token de la peticion
-            String  token = GetTokenForRequest.getToken(request, response);
+            String token = GetTokenForRequest.getToken(request);
             //obtenemos el email del token
             String email = jwtTokenProvider.getEmailFromToken(token);
             //cargamos el usuario con el email obtenid
