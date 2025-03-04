@@ -1,4 +1,4 @@
-```markdown
+
 # Flight Booking API
 
 A RESTful API for managing flight bookings, user authentication, and profile management. Built with Spring Boot, PostgreSQL, Redis, and JWT for secure authentication. Includes features like two-factor authentication (2FA), flight management, seat reservations, and user profile customization.
