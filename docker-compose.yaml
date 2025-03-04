@@ -6,22 +6,26 @@ services:
       dockerfile: Dockerfile
     ports:
       - "8080:8080"
+    networks:
+     - api-reserva-vuelos
+    depends_on:
+      - redis
     environment:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/reserva-vuelos
-      SPRING_DATASOURCE_USERNAME: postgres
-      SPRING_DATASOURCE_PASSWORD: postgres
+      SPRING_DATASOURCE_URL: jdbc:postgresql://ep-quiet-feather-a4y06yn1.us-east-1.aws.neon.tech/neondb
+      SPRING_DATASOURCE_USERNAME: neondb_owner
+      SPRING_DATASOURCE_PASSWORD: npg_tzL3yU8HnjED
       SPRING_REDIS_HOST: redis
+      SPRING_REDIS_PORT: 6379
 
-  db:
-    image: postgres:latest
-    environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: reserva-vuelos
-    ports:
-      - "5432:5432"
 
   redis:
-    image: redis:latest
+    image: redis:alpine
     ports:
       - "6379:6379"
+    networks:
+      - api-reserva-vuelos
+
+
+networks:
+  api-reserva-vuelos:
+    driver: bridge

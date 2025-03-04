@@ -1,14 +1,22 @@
-# Usa una imagen base de Java 17
-FROM openjdk:17-jdk-slim
-
-# Establece el directorio de trabajo
+# Build
+FROM gradle:8.10.1-jdk17 AS build
 WORKDIR /app
 
-# Copia el archivo JAR de la aplicación al contenedor
-COPY target/tu-aplicacion.jar /app/tu-aplicacion.jar
+COPY build.gradle settings.gradle gradlew ./
+COPY gradle ./gradle
 
-# Expone el puerto en el que correrá la aplicación
+RUN gradle dependencies --no-daemon
+
+COPY src ./src
+RUN gradle build --no-daemon -x test
+
+#start application
+FROM openjdk:17
+
+WORKDIR /app
+
+COPY --from=build /app/build/libs/*.jar ./app.jar
+
 EXPOSE 8080
 
-# Comando para ejecutar la aplicación
-ENTRYPOINT ["java", "-jar", "tu-aplicacion.jar"]
+ENTRYPOINT ["java" , "-jar", "app.jar"]

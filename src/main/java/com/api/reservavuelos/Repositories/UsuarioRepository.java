@@ -21,6 +21,6 @@ public interface UsuarioRepository extends JpaRepository<Usuarios, Long> {
             nativeQuery = true
     )
     Optional<String> findPasswordByEmail(@Param("email") String email);
-    Usuarios getById(Long id);
+
 }
 

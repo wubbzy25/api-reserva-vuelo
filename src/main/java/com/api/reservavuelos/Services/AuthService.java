@@ -249,7 +249,12 @@ public class AuthService {
         }
 
         // Obtenemos el usuario por su ID
-        Usuarios usuario = usuarioRepository.getById(id_usuario);
+        Optional<Usuarios> usuarioOptional = usuarioRepository.findById(id_usuario);
+        if (usuarioOptional.isEmpty()) {
+            // Si no existe el usuario, lanzamos una excepción no autorizada
+            throw new UserNotFoundException();
+        }
+        Usuarios usuario = usuarioOptional.get();
 
         // Creamos una nueva instancia de TwoFactorAuth
         TwoFactorAuth twoFactor = new TwoFactorAuth();
@@ -288,7 +293,7 @@ public class AuthService {
         Optional<TwoFactorAuth> twoFactorAuthOptional = twoFactorAuthRepository.findByid_usuario(id_usuario);
         if (twoFactorAuthOptional.isEmpty()) {
             // Si no tiene 2FA configurado, lanzamos una excepción
-            throw new IllegalArgumentException("No tienes activado el 2 FA");
+            throw new IllegalArgumentException("No tienes activado el 2FA");
         }
 
         // Obtenemos el usuario por su ID

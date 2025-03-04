@@ -422,7 +422,7 @@ class AuthServiceTest   {
     @Test
     void totpSetup() throws ParseException, IOException, WriterException {
         when(twoFactorAuthRepository.findByid_usuario(anyLong())).thenReturn(Optional.empty());
-        when(usuarioRepository.getById(anyLong())).thenReturn(DataProvider.obtenerUsuarioPorDefectoRolUsuario());
+        when(usuarioRepository.findById(anyLong())).thenReturn(Optional.of(DataProvider.obtenerUsuarioPorDefectoRolUsuario()));
         when(googleAuthenticatorService.generateSecretKey()).thenReturn("secretkey");
         when(twoFactorAuthRepository.save(any(TwoFactorAuth.class))).thenReturn(DataProvider.obtenerTwoFactorAuthPorDefecto());
         when(qrCodeGenerator.getQRCodeURL(anyLong(), anyString())).thenReturn("qrCodeurl");

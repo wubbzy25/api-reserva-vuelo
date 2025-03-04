@@ -24,7 +24,7 @@ public class RegisterRequestDTO {
     @NotEmpty(message =  "El Email es requerido")
     private String email;
     @NotNull
-    @NotEmpty(message = "El numero de teleofno es requrido")
+    @NotEmpty(message = "El numero de telefono es requrido")
     @Pattern(regexp = "\\d{10}", message = "El número de teléfono debe tener exactamente 10 dígitos")
     private String telefono;
     @NotNull(message = "la fecha de nacimiento no puede ser null")
