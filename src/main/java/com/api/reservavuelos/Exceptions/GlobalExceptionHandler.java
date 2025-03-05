@@ -109,6 +109,11 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ResponseDTO> handleCodeNotFoundException(HttpServletRequest request, CodeNotFoundException exception) {
         return new ResponseEntity<>(new ResponseDTO(dateFormatter.formatearFecha(), "P-404", exception.getMessage(), request.getRequestURI()), HttpStatus.NOT_FOUND);
     }
+
+    @ExceptionHandler(Code2FAException.class)
+    public ResponseEntity<ResponseDTO> handleCode2FAException(HttpServletRequest request, Code2FAException exception) {
+        return new ResponseEntity<>(new ResponseDTO(dateFormatter.formatearFecha(), "P-400", exception.getMessage(), request.getRequestURI()), HttpStatus.BAD_REQUEST);
+    }
     @ExceptionHandler(UnauthorizedException.class)
     public ResponseEntity<ResponseDTO> handleUnauthorizedException(HttpServletRequest request, UnauthorizedException exception) {
         return new ResponseEntity<>(new ResponseDTO(dateFormatter.formatearFecha(), "P-401", exception.getMessage(), request.getRequestURI()), HttpStatus.UNAUTHORIZED);

@@ -23,7 +23,7 @@ public class Profile_image  {
     private String image_url;
 
     @ToString.Exclude
-    @OneToOne(mappedBy = "profile_image")
+    @OneToOne(mappedBy = "profile_image", cascade = CascadeType.ALL)
     private Usuarios usuarios;
 
     @Override

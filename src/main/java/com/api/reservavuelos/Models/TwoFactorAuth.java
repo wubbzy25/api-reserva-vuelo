@@ -14,7 +14,7 @@ public class TwoFactorAuth {
     private Long idTwoFactorAuth;
     @Column
     private String secretKey;
-    @OneToOne()
+    @OneToOne(cascade = CascadeType.ALL)
     @JoinColumn(name = "id_usuario")
     private Usuarios usuarios;
 

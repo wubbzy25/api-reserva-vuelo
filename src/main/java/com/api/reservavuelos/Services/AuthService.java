@@ -40,7 +40,6 @@ public class AuthService {
     //declaramos los repositorios, servicios, variables, etc.
     private final UsuarioRepository usuarioRepository;
     private final RolRepository rolRepository;
-    private final CredencialesRepository credencialesRepository;
     private final JwtTokenProvider jwtTokenProvider;
     private final AuthenticationManager authenticationManager;
     private final PasswordEncoder passwordEncoder;
@@ -57,7 +56,6 @@ public class AuthService {
     @Autowired
     public AuthService(UsuarioRepository usuarioRepository,
                        RolRepository rolRepository,
-                       CredencialesRepository credencialesRepository,
                        JwtTokenProvider jwtTokenProvider,
                        AuthenticationManager authenticationManager,
                        PasswordEncoder passwordEncoder,
@@ -71,7 +69,6 @@ public class AuthService {
                        RedisTemplate<String, Object> redisTemplate) {
         this.usuarioRepository = usuarioRepository;
         this.rolRepository = rolRepository;
-        this.credencialesRepository = credencialesRepository;
         this.jwtTokenProvider = jwtTokenProvider;
         this.authenticationManager = authenticationManager;
         this.passwordEncoder = passwordEncoder;
@@ -85,42 +82,42 @@ public class AuthService {
         this.redisTemplate = redisTemplate;
     }
 
-
-     //metodo para registrar usuarios
-    public Usuarios registrarUsuario(RegisterRequestDTO registerRequestDTO){
-       //validamos que el email no este registrado
-        if (usuarioRepository.existsByEmail(registerRequestDTO.getEmail())){
-           throw new UserAlreadyRegisterException();
-       }
-        //obtenemos el rol usuario
-        Roles roles = rolRepository.findByNombre("usuario").orElseThrow(() -> new NoSuchElementException("No se encontro el rol usuario"));
-      //creamos un usuario y le asignamos los datos
-        Usuarios usuario = new Usuarios();
-       usuario.setPrimer_nombre(registerRequestDTO.getPrimer_nombre());
-       usuario.setSegundo_nombre(registerRequestDTO.getSegundo_nombre());
-       usuario.setPrimer_apellido(registerRequestDTO.getPrimer_apellido());
-       usuario.setSegundo_apellido(registerRequestDTO.getSegundo_apellido());
-       usuario.setEmail(registerRequestDTO.getEmail());
-       usuario.setTelefono(registerRequestDTO.getTelefono());
-       usuario.setFecha_nacimiento(registerRequestDTO.getFecha_nacimiento());
-       usuario.setGenero(registerRequestDTO.getGenero());
-       //creamos una imagen por defecto y le asignamos el usuario
-        Profile_image profileImage = new Profile_image();
-        profileImage.setImage_url("https://t4.ftcdn.net/jpg/00/64/67/63/360_F_64676383_LdbmhiNM6Ypzb3FM4PPuFP9rHe7ri8Ju.jpg");
-        profileImage.setUsuarios(usuario);
-        profileImageRepository.save(profileImage);
-        //creamos las credenciales, le asignamos la contraseña, la hasheamos y le asignamos el usuario
-       Credenciales credencial = new Credenciales();
-       credencial.setContraseña(passwordEncoder.encode(registerRequestDTO.getContraseña()));
-       credencial.setUsuarios(usuario);
-       credencialesRepository.save(credencial);
-       usuario.setRoles(Collections.singletonList(roles));
-       //guardamos el usuario
-       Usuarios usuarioGuardado = usuarioRepository.save(usuario);
-
-        return usuarioGuardado;
+public Usuarios registrarUsuario(RegisterRequestDTO registerRequestDTO) {
+    // Validate email not already registered
+    if (usuarioRepository.existsByEmail(registerRequestDTO.getEmail())) {
+        throw new UserAlreadyRegisterException();
     }
 
+    // Find user role
+    Roles roles = rolRepository.findByNombre("usuario")
+        .orElseThrow(() -> new NoSuchElementException("No se encontro el rol usuario"));
+
+    // Create user and set basic information
+    Usuarios usuario = new Usuarios();
+    usuario.setPrimer_nombre(registerRequestDTO.getPrimer_nombre());
+    usuario.setSegundo_nombre(registerRequestDTO.getSegundo_nombre());
+    usuario.setPrimer_apellido(registerRequestDTO.getPrimer_apellido());
+    usuario.setSegundo_apellido(registerRequestDTO.getSegundo_apellido());
+    usuario.setEmail(registerRequestDTO.getEmail());
+    usuario.setTelefono(registerRequestDTO.getTelefono());
+    usuario.setFecha_nacimiento(registerRequestDTO.getFecha_nacimiento());
+    usuario.setGenero(registerRequestDTO.getGenero());
+    usuario.setContraseña(registerRequestDTO.getContraseña());
+
+    // Set roles
+    usuario.setRoles(Collections.singletonList(roles));
+
+
+    // Then create and save profile image with the saved user
+    Profile_image profileImage = new Profile_image();
+    profileImage.setImage_url("https://t4.ftcdn.net/jpg/00/64/67/63/360_F_64676383_LdbmhiNM6Ypzb3FM4PPuFP9rHe7ri8Ju.jpg");
+    profileImage.setUsuarios(usuario);
+    profileImageRepository.save(profileImage);
+    usuario.setProfile_image(profileImage);
+    return usuarioRepository.save(usuario);
+}
+
+     
     //metodo para iniciar sesion
     public AuthResponseDTO login(LoginRequestDTO dtoLogin, HttpServletRequest request) throws InvalidCredentialsException {
                //validamos que el usuario exista
@@ -131,9 +128,9 @@ public class AuthService {
                //obtenemos el usuario
                 Usuarios usuario = usuarioOptional.get();
                 //obtenemos la credencial del usuario
-                Credenciales credenciales = credencialesRepository.getPasswordByEmail(usuario.getEmail());
+
                 //validamos que la contraseña sea correcta
-                boolean PasswordMatch = passwordEncoder.matches(dtoLogin.getContraseña(), credenciales.getContraseña());
+                boolean PasswordMatch = passwordEncoder.matches(dtoLogin.getContraseña(), usuario.getContraseña());
                 if (!PasswordMatch) {
                     throw new InvalidCredentialsException("Contraseña incorrecta");
                 }
@@ -187,7 +184,7 @@ public class AuthService {
         // Comprobamos si el código proporcionado por el usuario coincide con el almacenado
         if (!Objects.equals(codigoRequestDTO.getCodigo(), code)) {
             // Si no coinciden, lanzamos una excepción indicando que el código no es válido
-            throw new CodeNotFoundException("El codigo no es valido");
+                throw new CodeNotFoundException("El codigo no es valido");
         }
 
         // Si coinciden, eliminamos el código almacenado
@@ -220,18 +217,16 @@ public class AuthService {
             throw new IllegalArgumentException("No tienes permiso para realizar esta accion");
         }
 
-        // Obtenemos las credenciales del usuario usando su email
-        Credenciales credenciales = credencialesRepository.getPasswordByEmail(usuario.getEmail());
 
         // Verificamos si la nueva contraseña coincide con la actual, lanzamos una excepción si es así
-        boolean contraseñaDescifrada = passwordEncoder.matches(resetPasswordRequestDTO.getPassword(), credenciales.getContraseña());
+        boolean contraseñaDescifrada = passwordEncoder.matches(resetPasswordRequestDTO.getPassword(), usuario.getContraseña());
         if (contraseñaDescifrada) {
             throw new IllegalArgumentException("La contraseña actual es igual a la nueva");
         }
 
         // Codificamos la nueva contraseña y la guardamos en la base de datos
-        credenciales.setContraseña(passwordEncoder.encode(resetPasswordRequestDTO.getPassword()));
-        credencialesRepository.save(credenciales);
+        usuario.setContraseña(passwordEncoder.encode(resetPasswordRequestDTO.getPassword()));
+        usuarioRepository.save(usuario);
 
         // Eliminamos el estado de verificación asociado al email
         resetPasswordService.deleteData(email);
@@ -293,7 +288,7 @@ public class AuthService {
         Optional<TwoFactorAuth> twoFactorAuthOptional = twoFactorAuthRepository.findByid_usuario(id_usuario);
         if (twoFactorAuthOptional.isEmpty()) {
             // Si no tiene 2FA configurado, lanzamos una excepción
-            throw new IllegalArgumentException("No tienes activado el 2FA");
+                throw new IllegalArgumentException("No tienes activado el 2FA");
         }
 
         // Obtenemos el usuario por su ID

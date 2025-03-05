@@ -36,11 +36,9 @@ public class Usuarios  {
     private Date fecha_nacimiento;
     @Column()
     private String genero;
-     @OneToOne(fetch = FetchType.EAGER, cascade = CascadeType.ALL)
-     @JoinColumn(name = "id_credencial")
-    private Credenciales credenciales;
+    private String contraseña;
     @ToString.Exclude
-     @ManyToMany(fetch = FetchType.EAGER, cascade = CascadeType.ALL)
+     @ManyToMany(fetch = FetchType.EAGER, cascade = CascadeType.PERSIST)
      @JoinTable(
              name = "usuarios_roles",
              joinColumns = @JoinColumn(name = "id_usuario"),
@@ -48,14 +46,14 @@ public class Usuarios  {
      )
      private List<Roles> roles;
     @ToString.Exclude
-     @OneToOne(fetch = FetchType.EAGER, cascade = CascadeType.ALL)
-     @JoinColumn(name = "id_profile_image")
-     private Profile_image profile_image;
+    @OneToOne(cascade = CascadeType.ALL, optional = false)
+    @JoinColumn(name = "id_profile_image", referencedColumnName = "id_profile_image", nullable = false)
+    private Profile_image profile_image;
     @ToString.Exclude
-    @OneToOne(mappedBy = "usuarios")
+    @OneToOne(mappedBy = "usuarios", cascade = CascadeType.ALL)
     private TwoFactorAuth twoFactorAuth;
     @ToString.Exclude
-    @OneToOne(mappedBy = "usuarios")
+    @OneToOne(mappedBy = "usuarios", cascade = CascadeType.ALL)
     private Reservas reservas;
     @Override
     public final boolean equals(Object o) {
