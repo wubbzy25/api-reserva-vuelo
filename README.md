@@ -44,7 +44,6 @@ A RESTful API for managing flight bookings, user authentication, and profile man
    ```bash
    docker ps
    ```
-   ![Docker Containers Running](https://via.placeholder.com/600x400?text=Docker+Containers+Running)
 
 The API will be accessible at `http://localhost:8080`.
 
